@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Confidential Wallet Backup — Zama FHEVM (Sepolia)</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <style>
+      /* Minimal, elegant glass UI — fresh and different from your examples */
+      :root {
+        --bg0: #0f1724;
+        --bg1: linear-gradient(135deg, #071028aa, #0b1220cc);
+        --glass: rgba(255, 255, 255, 0.04);
+        --card: rgba(255, 255, 255, 0.03);
+        --accent1: #7bdff6;
+        --accent2: #9b8cff;
+        --muted: #9aa7b2;
+        --text: #e6eef6;
+        --ok: #10b981;
+        --err: #ff6b6b;
+        --radius: 16px;
+        --pad: 18px;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg0);
+        color: var(--text);
+      }
+      body {
+        background: linear-gradient(180deg, #071427 0%, #081522 60%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+      }
+      .stage {
+        width: 100%;
+        max-width: 980px;
+        padding: 28px;
+      }
+      header.top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .brand {
+        display: flex;
+        flex-direction: column;
+      }
+      .brand .title {
+        font-weight: 800;
+        letter-spacing: -0.6px;
+        font-size: 20px;
+        background: linear-gradient(90deg, var(--accent1), var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .brand .sub {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 3px;
+      }
+      .spacer {
+        flex: 1;
+      }
+      button.connect {
+        background: linear-gradient(135deg, var(--accent1), var(--accent2));
+        color: #021015;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 8px 30px rgba(123, 223, 246, 0.08);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        gap: 18px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: var(--pad);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        box-shadow: 0 6px 30px rgba(2, 8, 23, 0.6);
+        backdrop-filter: blur(8px) saturate(120%);
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 10px;
+      }
+      input[type="text"],
+      input[type="number"],
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        background: rgba(2, 6, 12, 0.35);
+        color: var(--text);
+        outline: none;
+        font-size: 14px;
+      }
+      textarea {
+        min-height: 86px;
+        resize: vertical;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        background: linear-gradient(135deg, var(--accent1), var(--accent2));
+        color: #001114;
+        border: 0;
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+      .btn.warn {
+        background: linear-gradient(135deg, #ffb86b, #ff7aa2);
+        color: #081014;
+      }
+
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+      .log {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        background: rgba(1, 6, 10, 0.35);
+        padding: 12px;
+        border-radius: 10px;
+        color: #cfeefb;
+        white-space: pre-wrap;
+        max-height: 240px;
+        overflow: auto;
+      }
+      .status {
+        padding: 8px;
+        border-radius: 10px;
+        margin-top: 12px;
+        font-weight: 700;
+      }
+      .status.ok {
+        background: rgba(16, 185, 129, 0.12);
+        color: var(--ok);
+        border: 1px solid rgba(16, 185, 129, 0.12);
+      }
+      .status.err {
+        background: rgba(255, 107, 107, 0.08);
+        color: var(--err);
+        border: 1px solid rgba(255, 107, 107, 0.08);
+      }
+
+      footer {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+      a.link {
+        color: var(--accent1);
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .mini {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      select {
+        height: 40px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      @media (max-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <header class="top">
+        <div class="brand">
+          <div class="title">Confidential Wallet Backup</div>
+          <div class="sub">Encrypted MPC backup — recover keys without revealing shares</div>
+        </div>
+        <div class="spacer"></div>
+        <div style="text-align: right">
+          <div class="mini">Network: <strong>Sepolia</strong></div>
+          <div style="height: 6px"></div>
+          <button id="connectBtn" class="connect">Connect Wallet</button>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- LEFT: main controls -->
+        <section class="card">
+          <h2>Upload Encrypted Recovery Share</h2>
+          <div class="hint">
+            EN: Provide your backup share (hex or decimal) MPC (hex / decimal). We'll encrypt it under Zama global key
+            before sending.
+          </div>
+
+          <label>Contract</label>
+          <input id="contractAddr" type="text" value="0x14505492a0Bf0D1C6F0435D94dE54a9A785f1826" readonly />
+
+          <label>Your share (hex or decimal)</label>
+          <textarea id="shareInput" placeholder="0xabc123...  — or decimal number"></textarea>
+          <div class="row">
+            <button id="uploadBtn" class="btn">Encrypt & Upload</button>
+            <button id="encryptPreviewBtn" class="btn ghost">Preview handle only</button>
+            <div style="flex: 1"></div>
+            <select id="slotType" title="Slot type">
+              <option value="euint256">euint256 (default)</option>
+            </select>
+          </div>
+          <div id="uploadStatus" class="small"></div>
+
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.03)" />
+
+          <h2>Access Control & Recovery</h2>
+          <label>Address (grant / revoke)</label>
+          <input id="targetAddr" placeholder="0x... (relayer or other address)" />
+          <div class="row controls">
+            <button id="grantBtn" class="btn ghost">Grant persistent access</button>
+            <button id="grantTransientBtn" class="btn ghost">Grant transient access</button>
+            <button id="revokeBtn" class="btn ghost">Revoke (delete) share</button>
+          </div>
+          <div class="hint">
+            Allow relayer to read your encrypted part for backup (persistent = persistent ACL, transient = single tx).
+          </div>
+
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.03)" />
+
+          <h2>Recovery</h2>
+          <div class="hint">
+            EN: Admin or designated relayer can request recovery. Query calls an event, offchain MPC/KMS restores keys.
+          </div>
+          <div class="row">
+            <button id="requestRecoveryBtn" class="btn">Request Recovery</button>
+            <button id="getHandleBtn" class="btn ghost">Show my handle</button>
+            <button id="makePublicBtn" class="btn ghost">Make share public</button>
+          </div>
+          <div id="recoveryStatus" class="small"></div>
+
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.03)" />
+
+          <h2>Decrypt / Inspect (demo)</h2>
+          <div class="hint">
+            EN: For testing — request userDecrypt (EIP-712) or publicDecrypt. SDK used for private decryption in
+            browser.
+          </div>
+          <div class="row">
+            <button id="publicDecryptBtn" class="btn ghost">Public decrypt</button>
+            <button id="userDecryptBtn" class="btn">User decrypt (EIP-712)</button>
+            <div style="flex: 1"></div>
+          </div>
+        </section>
+
+        <!-- RIGHT: status / admin / info -->
+        <aside class="card">
+          <h2>Session & Info</h2>
+          <div class="small">Statuses and hints — read, before pressing buttons.</div>
+
+          <label>Wallet</label>
+          <input id="walletAddr" readonly placeholder="not connected" />
+
+          <label>Relayer URL</label>
+          <input id="relayerUrl" readonly value="https://relayer.testnet.zama.cloud" />
+
+          <label>SDK status</label>
+          <div id="sdkStatus" class="status">SDK: not initialized</div>
+
+          <label style="margin-top: 12px">Contract version</label>
+          <div id="contractVersion" class="mini" style="margin-top: 6px">—</div>
+
+          <label style="margin-top: 12px">Quick logs</label>
+          <div id="miniLog" class="mini" style="margin-top: 6px; color: var(--muted)">—</div>
+
+          <div style="height: 12px"></div>
+          <button id="showRawBtn" class="btn ghost">Copy helpful snippets</button>
+          <div class="small" style="margin-top: 12px">
+            Docs:
+            <a class="link" href="https://docs.zama.org/protocol/relayer-sdk-guides/" target="_blank"
+              >Zama Relayer SDK</a
+            >
+          </div>
+
+          <footer style="margin-top: 18px; font-size: 12px; color: var(--muted)">
+            UI: English (labels) — Рус UX hints • Relayer SDK v0.2.0 • Sepolia
+          </footer>
+        </aside>
+      </div>
+    </div>
+
+    <script type="module">
+      import { BrowserProvider, Contract, getAddress, hexlify } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
+      import {
+        initSDK,
+        createInstance,
+        SepoliaConfig,
+        generateKeypair,
+      } from "https://cdn.zama.org/relayer-sdk-js/0.3.0-5/relayer-sdk-js.js";
+
+      // ----- CONFIG -----
+      const CONTRACT_ADDRESS = "0x14505492a0Bf0D1C6F0435D94dE54a9A785f1826";
+      const RELAYER_URL = document.getElementById("relayerUrl").value;
+      const CHAIN_ID_HEX = "0xaa36a7"; // Sepolia
+
+      // ABI minimal for our contract (matches implemented interface)
+      const ABI = [
+        {
+          inputs: [
+            { internalType: "bytes32", name: "extShare", type: "bytes32" },
+            { internalType: "bytes", name: "proof", type: "bytes" },
+          ],
+          name: "uploadShare",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            { internalType: "address", name: "user", type: "address" },
+            { internalType: "address", name: "to", type: "address" },
+          ],
+          name: "grantAccess",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            { internalType: "address", name: "user", type: "address" },
+            { internalType: "address", name: "to", type: "address" },
+          ],
+          name: "grantTransientAccess",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "address", name: "user", type: "address" }],
+          name: "makeSharePublic",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "address", name: "user", type: "address" }],
+          name: "requestRecovery",
+          outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "address", name: "user", type: "address" }],
+          name: "getHandle",
+          outputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "address", name: "user", type: "address" }],
+          name: "revokeShare",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            { internalType: "address", name: "user", type: "address" },
+            { internalType: "uint256", name: "plain", type: "uint256" },
+          ],
+          name: "storeSharePlain",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "version",
+          outputs: [{ internalType: "string", name: "", type: "string" }],
+          stateMutability: "pure",
+          type: "function",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            { indexed: true, internalType: "address", name: "user", type: "address" },
+            { indexed: false, internalType: "bytes32", name: "handle", type: "bytes32" },
+          ],
+          name: "ShareStored",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            { indexed: true, internalType: "address", name: "user", type: "address" },
+            { indexed: false, internalType: "bytes32", name: "handle", type: "bytes32" },
+          ],
+          name: "RecoveryRequested",
+          type: "event",
+        },
+      ];
+
+      // ----- UI refs -----
+      const connectBtn = document.getElementById("connectBtn");
+      const walletAddr = document.getElementById("walletAddr");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const encryptPreviewBtn = document.getElementById("encryptPreviewBtn");
+      const shareInput = document.getElementById("shareInput");
+      const slotType = document.getElementById("slotType");
+      const uploadStatus = document.getElementById("uploadStatus");
+      const grantBtn = document.getElementById("grantBtn");
+      const grantTransientBtn = document.getElementById("grantTransientBtn");
+      const revokeBtn = document.getElementById("revokeBtn");
+      const targetAddr = document.getElementById("targetAddr");
+      const requestRecoveryBtn = document.getElementById("requestRecoveryBtn");
+      const getHandleBtn = document.getElementById("getHandleBtn");
+      const makePublicBtn = document.getElementById("makePublicBtn");
+      const publicDecryptBtn = document.getElementById("publicDecryptBtn");
+      const userDecryptBtn = document.getElementById("userDecryptBtn");
+      const sdkStatus = document.getElementById("sdkStatus");
+      const miniLog = document.getElementById("miniLog");
+      const contractVersion = document.getElementById("contractVersion");
+      const relayerUrlInput = document.getElementById("relayerUrl");
+
+      // ----- state -----
+      let provider = null;
+      let signer = null;
+      let signerAddress = null;
+      let contract = null;
+      let relayer = null;
+
+      function log(s) {
+        const t = `[${new Date().toLocaleTimeString()}] ${s}\n`;
+        if (typeof s != "object") {
+          console.log(`${t} ${s}`);
+          miniLog.textContent = s;
+        } else {
+          console.log(`${t}:`);
+          console.log(s);
+          miniLog.textContent = JSON.stringify(s);
+        }
+      }
+
+      // parse user input to BigInt (hex or decimal)
+      function parseShareToBigInt(text) {
+        if (!text) throw new Error("empty share");
+        const t = String(text).trim();
+        if (t.startsWith("0x") || /^[0-9a-fA-F]+$/.test(t)) {
+          return BigInt(t);
+        }
+        // decimal?
+        if (/^\d+$/.test(t)) return BigInt(t);
+        // try to strip 0x
+        const maybe = t.replace(/^0x/, "");
+        if (/^[0-9a-fA-F]+$/.test(maybe)) return BigInt("0x" + maybe);
+        throw new Error("Unsupported share format — use hex (0x...) or decimal");
+      }
+
+      // helper: safely stringify BigInt-containing objects
+      function safeStringify(obj, space = 2) {
+        console.log(obj);
+        return JSON.stringify(obj, (key, value) => (typeof value === "bigint" ? value.toString() : value), space);
+      }
+
+      // smart pretty-printer for decrypted BigInt values
+      function prettyDecryptValue(v) {
+        if (typeof v !== "bigint") return v;
+
+        // если число влезает в обычный int (например, < 1e12) — показываем как число
+        if (v < 1_000_000_000_000n) return Number(v);
+
+        // иначе показываем как hex (скорее всего это euint256 / адрес / share)
+        let hex = v.toString(16);
+        if (hex.length % 2) hex = "0" + hex;
+        return "0x" + hex;
+      }
+
+      // initialize SDK and create relayer instance
+      async function initRelayerInstance() {
+        if (relayer) return relayer;
+        sdkStatus.textContent = "SDK: initializing...";
+        try {
+          await initSDK(); // required per SDK guide
+          relayer = await createInstance({
+            ...SepoliaConfig,
+            relayerUrl: RELAYER_URL,
+            network: window.ethereum,
+            debug: false,
+          });
+          sdkStatus.textContent = "SDK: ready";
+          log("Relayer SDK ready");
+          return relayer;
+        } catch (e) {
+          sdkStatus.textContent = "SDK: init error";
+          log("Relayer init error: " + (e.message || e));
+          throw e;
+        }
+      }
+
+      // connect wallet
+      connectBtn.addEventListener("click", async () => {
+        try {
+          if (!window.ethereum) throw new Error("Please install MetaMask or compatible wallet");
+          provider = new BrowserProvider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          const net = await provider.getNetwork();
+          if (net.chainId !== 11155111n) {
+            try {
+              await provider.send("wallet_switchEthereumChain", [{ chainId: CHAIN_ID_HEX }]);
+            } catch (e) {}
+          }
+          signer = await provider.getSigner();
+          signerAddress = await signer.getAddress();
+          walletAddr.value = signerAddress;
+          connectBtn.textContent = signerAddress.slice(0, 6) + "…" + signerAddress.slice(-4);
+          contract = new Contract(getAddress(CONTRACT_ADDRESS), ABI, signer);
+          const ver = await contract.version().catch(() => null);
+          contractVersion.textContent = ver || "—";
+          await initRelayerInstance();
+          log("Wallet connected: " + signerAddress);
+        } catch (e) {
+          alert("Connect error: " + (e.message || e));
+          console.error(e);
+          log("Connect error: " + (e.message || e));
+        }
+      });
+
+      // helper: create encrypted input with 1 value (euint256)
+      async function createEncryptedShareHandle(bigintValue) {
+        const r = await initRelayerInstance();
+        const ca = getAddress(CONTRACT_ADDRESS);
+        const ua = getAddress(signerAddress);
+        const enc = r.createEncryptedInput(ca, ua);
+
+        // detect possible add methods
+        if (typeof enc.add256 === "function") {
+          enc.add256(bigintValue);
+        } else if (typeof enc.addUint256 === "function") {
+          enc.addUint256(bigintValue);
+        } else if (typeof enc.addBigInt === "function") {
+          enc.addBigInt(bigintValue);
+        } else {
+          // fallback attempt: use add64 twice? not correct for 256 — but most SDKs have add256
+          throw new Error("Relayer SDK: no add256/addUint256 method found");
+        }
+        const { handles, inputProof } = await enc.encrypt();
+        if (!handles || handles.length === 0) throw new Error("no handles returned from encrypt");
+        return { handle: handles[0], proof: inputProof };
+      }
+
+      // uploadShare
+      uploadBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          uploadStatus.textContent = "Encrypting...";
+          const txt = shareInput.value;
+          const val = parseShareToBigInt(txt);
+          const { handle, proof } = await createEncryptedShareHandle(val);
+          uploadStatus.textContent = "Sending tx...";
+          log("Encrypted handle: " + String(handle));
+          const tx = await contract.uploadShare(handle, proof);
+          uploadStatus.textContent = "Waiting for tx...";
+          const rc = await tx.wait();
+          uploadStatus.textContent = "Share uploaded — tx: " + tx.hash;
+          log("uploadShare tx confirmed: " + tx.hash);
+        } catch (e) {
+          uploadStatus.textContent = "Error: " + (e.message || e);
+          log("upload error: " + (e.message || e));
+          console.error(e);
+        }
+      });
+
+      // preview encryption only (no tx)
+      encryptPreviewBtn.addEventListener("click", async () => {
+        try {
+          if (!signerAddress) await connectBtn.click();
+          const val = parseShareToBigInt(shareInput.value);
+          const { handle } = await createEncryptedShareHandle(val);
+          log("Preview handle: " + String(handle));
+          uploadStatus.textContent = "Preview handle: " + String(handle);
+        } catch (e) {
+          uploadStatus.textContent = "Error preview: " + (e.message || e);
+          log("Preview error: " + (e.message || e));
+        }
+      });
+
+      // grant persistent access
+      grantBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const user = signerAddress;
+          const to = getAddress(targetAddr.value.trim());
+          const tx = await contract.grantAccess(user, to);
+          miniLog.textContent = "grantAccess tx: " + tx.hash;
+          log("grantAccess sent: " + tx.hash);
+          await tx.wait();
+          log("grantAccess confirmed");
+        } catch (e) {
+          log("grantAccess error: " + (e.message || e));
+          alert("Grant error: " + (e.message || e));
+        }
+      });
+
+      // grant transient access
+      grantTransientBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const user = signerAddress;
+          const to = getAddress(targetAddr.value.trim());
+          const tx = await contract.grantTransientAccess(user, to);
+          log("grantTransientAccess tx: " + tx.hash);
+          await tx.wait();
+          log("grantTransient confirmed");
+        } catch (e) {
+          log("grantTransient error: " + (e.message || e));
+          alert("Grant transient error: " + (e.message || e));
+        }
+      });
+
+      // revoke share (revoke deletes on-chain pointer)
+      revokeBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const user = signerAddress;
+          const tx = await contract.revokeShare(user);
+          log("revokeShare tx: " + tx.hash);
+          await tx.wait();
+          log("revoked");
+        } catch (e) {
+          log("revoke error: " + (e.message || e));
+          alert("Revoke error: " + (e.message || e));
+        }
+      });
+
+      // request recovery (admin or relayer only) — emits event
+      requestRecoveryBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const user = signerAddress;
+          const h = await contract.requestRecovery(user);
+          log("requestRecovery emitted handle: " + String(h));
+          document.getElementById("recoveryStatus").textContent = "Recovery requested: " + String(h);
+        } catch (e) {
+          log("requestRecovery error: " + (e.message || e));
+          alert("Recovery error: " + (e.message || e));
+        }
+      });
+
+      // get handle
+      getHandleBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const h = await contract.getHandle(signerAddress);
+          log("getHandle: " + String(h));
+          uploadStatus.textContent = "Handle: " + String(h);
+        } catch (e) {
+          log("getHandle error: " + (e.message || e));
+        }
+      });
+
+      // make share public
+      makePublicBtn.addEventListener("click", async () => {
+        try {
+          if (!contract) await connectBtn.click();
+          const user = signerAddress;
+          const tx = await contract.makeSharePublic(user);
+          log("makeSharePublic tx: " + tx.hash);
+          await tx.wait();
+          log("share is publicly decryptable now");
+        } catch (e) {
+          log("makeSharePublic error: " + (e.message || e));
+          alert("Make public error: " + (e.message || e));
+        }
+      });
+
+      // public decrypt demo: asks relayer to publicDecrypt handle(s)
+      publicDecryptBtn.addEventListener("click", async () => {
+        try {
+          await initRelayerInstance();
+          const h = await contract.getHandle(signerAddress);
+          // normalize handle to hex string
+          const handleHex = typeof h === "bigint" ? hexlify(h) : String(h);
+          log("publicDecrypt request for handle: " + handleHex);
+
+          const out = await relayer.publicDecrypt([handleHex]);
+          // pretty-print decrypt result with hex conversion
+          for (const [k, v] of Object.entries(out)) {
+            const pretty = prettyDecryptValue(v);
+            log(`publicDecrypt handle ${k} → ${pretty}`);
+            console.log(`🔓 ${k}:`, pretty);
+          }
+          alert("Public decrypt result: check console");
+        } catch (e) {
+          console.error(e);
+          log("publicDecrypt error: " + (e.message || e));
+          alert("Public decrypt error: " + (e.message || e));
+        }
+      });
+
+      // userDecrypt (EIP-712) demo: returns re-encrypted plaintext for user
+      userDecryptBtn.addEventListener("click", async () => {
+        try {
+          await initRelayerInstance();
+          const h = await contract.getHandle(signerAddress);
+          // normalize handle to hex string
+          const handleHex = typeof h === "bigint" ? hexlify(h) : String(h);
+
+          // generate ephemeral keypair for reencryption
+          const kp = await generateKeypair();
+          const startTs = Math.floor(Date.now() / 1000).toString();
+          const days = "7";
+
+          const eip = relayer.createEIP712(kp.publicKey, [getAddress(CONTRACT_ADDRESS)], startTs, days);
+
+          const signProv = new BrowserProvider(window.ethereum);
+          const signer2 = await signProv.getSigner();
+
+          // sign typed data (EIP-712)
+          const signature = await signer2.signTypedData(
+            eip.domain,
+            { UserDecryptRequestVerification: eip.types.UserDecryptRequestVerification },
+            eip.message,
+          );
+
+          // remove "0x" for SDK call
+          const rawSig = signature.replace(/^0x/, "");
+
+          log("userDecrypt: sending request to relayer (reencrypted to our ephemeral key)");
+          const out = await relayer.userDecrypt(
+            [{ handle: handleHex, contractAddress: getAddress(CONTRACT_ADDRESS) }],
+            kp.privateKey,
+            kp.publicKey,
+            rawSig,
+            [getAddress(CONTRACT_ADDRESS)],
+            signerAddress,
+            startTs,
+            days,
+          );
+
+          for (const [k, v] of Object.entries(out)) {
+            const pretty = prettyDecryptValue(v);
+            log(`userDecrypt handle ${k} → ${pretty}`);
+            console.log(`🧩 ${k}:`, pretty);
+          }
+          alert("User decrypt complete — check console for result");
+        } catch (e) {
+          console.error(e);
+          log("userDecrypt error: " + (e.message || e));
+          alert("User decrypt error: " + (e.message || e));
+        }
+      });
+
+      // helpful copy button
+      document.getElementById("showRawBtn").addEventListener("click", () => {
+        const txt = [
+          "Contract: " + CONTRACT_ADDRESS,
+          "Relayer: " + RELAYER_URL,
+          "Ethers v6 + Zama Relayer SDK v0.2.0",
+        ].join("\n");
+        navigator.clipboard.writeText(txt).then(() => alert("Copied config to clipboard"));
+      });
+
+      // small safety: auto-detect network mismatch and notify
+      setInterval(async () => {
+        try {
+          if (!provider) return;
+          const net = await provider.getNetwork();
+          if (net.chainId !== 11155111n) {
+            sdkStatus.textContent = "Please switch wallet to Sepolia";
+          } else {
+            if (sdkStatus.textContent.startsWith("SDK")) {
+            } else sdkStatus.textContent = "Connected";
+          }
+        } catch (e) {}
+      }, 4000);
+    </script>
+  </body>
+</html>
