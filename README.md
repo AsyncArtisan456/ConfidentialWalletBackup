@@ -1,143 +1,86 @@
-# 🌐 Private Geo-Age Access — Zama FHEVM DApp
-
-> **Fully Homomorphic Encrypted geolocation + age gate on Ethereum Sepolia Testnet**  
-> Combines encrypted latitude/longitude and age checks to grant access **without ever revealing the user’s private
-> data**.
-
----
-
-## 🧩 Overview
-
-`PrivateGeoAgeAccess` is a **confidential smart contract** built on [Zama’s FHEVM](https://docs.zama.ai/protocol) that
-enables access control based on a user’s **encrypted age** and **encrypted geolocation**.
-
-- 🧭 Checks if the user is **inside a geofenced area** (latitude/longitude).
-- 🎂 Verifies that the user’s **age ≥ minimum threshold**.
-- 🔒 Returns an **encrypted boolean** (`ebool`) — publicly decryptable only if access is granted.
-- 🧠 All comparisons and logic are performed **directly on ciphertexts**, preserving privacy.
-
----
-
 ````markdown
-## ⚙️ Smart Contract
+# 🧩 Confidential Wallet Backup — Zama FHEVM (Sepolia)
 
-**File:** `contracts/PrivateGeoAgeAccess.sol`
+**ConfidentialWalletBackup** is a demonstration project for **encrypted key recovery backup** on the Sepolia test
+network using the **Zama Fully Homomorphic Encryption Virtual Machine (FHEVM)** and **Relayer SDK**.
+
+It enables users to upload an **encrypted share of their MPC secret** (a recovery fragment), manage access control, and
+decrypt data in the browser through **EIP-712 signed user decryption** — without revealing any sensitive information.
+
+---
+
+## 🔐 Overview
+
+- Each user stores their **encrypted recovery share** on-chain.
+- The data is encrypted under the **Zama FHEVM global key** via the **Relayer SDK**.
+- Access permissions are controlled via **FHE.allow() / FHE.allowTransient()**.
+- Key recovery is initiated off-chain when an **admin or relayer** triggers `requestRecovery`.
+
+---
+
+## 🧱 Smart Contract: `ConfidentialWalletBackup.sol`
+
+### 📜 Description
+
+The contract provides secure storage, access control, and decryption of encrypted `euint256` values using the
+**@fhevm/solidity** library.  
+It supports public decryption, transient access, and secure revocation.
+
+### ⚙️ Core Functions
+
+| Function                                              | Description                                             |
+| ----------------------------------------------------- | ------------------------------------------------------- |
+| `uploadShare(externalEuint256 extShare, bytes proof)` | Uploads and stores a user’s encrypted share.            |
+| `grantAccess(address user, address to)`               | Grants persistent decryption access to another address. |
+| `grantTransientAccess(address user, address to)`      | Grants temporary (single-use) access.                   |
+| `makeSharePublic(address user)`                       | Makes the share publicly decryptable.                   |
+| `requestRecovery(address user)`                       | Initiates recovery (emits `RecoveryRequested` event).   |
+| `getHandle(address user)`                             | Returns the encrypted handle (ciphertext ID).           |
+| `revokeShare(address user)`                           | Revokes and zeroes the user’s share.                    |
+| `storeSharePlain(address user, uint256 plain)`        | (Admin only) Stores a plaintext share directly.         |
+| `version()`                                           | Returns the current contract version.                   |
+
+### 🧩 Imports
 
 ```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
-
-import { FHE, ebool, euint16, euint64, externalEuint16, externalEuint64 } from "@fhevm/solidity/lib/FHE.sol";
+import { FHE, euint256, externalEuint256, ebool } from "@fhevm/solidity/lib/FHE.sol";
 import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
 ```
 ````
 
-### Core Functions
-
-| Function                                                                                  | Description                                                                 |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `setGeofence(int64 latMin, int64 latMax, int64 lonMin, int64 lonMax)`                     | Updates the allowed coordinate boundaries.                                  |
-| `setMinAge(uint16 age)`                                                                   | Sets minimum allowed user age (1–150).                                      |
-| `checkAccess(externalEuint64 lat, externalEuint64 lon, externalEuint16 age, bytes proof)` | Combines encrypted geo & age to produce an encrypted `ebool` access result. |
-
-### Events
-
-| Event                                               | Purpose                                                                               |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `GeoUpdated(...)`                                   | Emitted when the admin updates geofence limits.                                       |
-| `MinAgeUpdated(uint16)`                             | Emitted when the minimal allowed age changes.                                         |
-| `AccessChecked(address user, bytes32 resultHandle)` | Fired after each access verification; the result handle can be decrypted via relayer. |
-
 ---
 
-## 🌍 Frontend (Relayer SDK v0.2.0)
+## 💻 Web Interface (`index.html`)
 
-**File:** `frontend/index.html`
+### 🧭 Features
 
-A standalone frontend that connects via MetaMask to Sepolia and interacts with Zama’s Relayer:
+The HTML interface provides a full client-side workflow:
 
-- Uses [`@zama-fhe/relayer-sdk`](https://docs.zama.ai/protocol/relayer-sdk-guides/) for encryption/decryption.
-- Integrates [`ethers.js v6`](https://docs.ethers.org/v6/) for contract interaction.
-- Supports both **admin mode** (for the owner) and **user mode** (for encrypted verification).
+1. Connect wallet (MetaMask)
+2. Encrypt value using **Relayer SDK**
+3. Upload encrypted share to the contract
+4. Manage access control (grant / revoke / transient)
+5. Trigger recovery and make shares public
+6. Demonstrate private decryption via **EIP-712** signing
 
----
-
-## 🚀 Quick Start
-
-### 1. Prerequisites
-
-- Node ≥ 18
-- MetaMask connected to **Sepolia**
-- Contract deployed with Zama’s Solidity libraries (`@fhevm/solidity`)
-- Access to Zama Relayer endpoint (default: `https://relayer.testnet.zama.cloud`)
-
-### 2. Deploy the Contract
-
-```bash
-# Example deployment via Hardhat
-npx hardhat run scripts/deploy.js --network sepolia
-```
-
-Constructor arguments:
-
-| Parameter                                  | Type     | Description                           |
-| ------------------------------------------ | -------- | ------------------------------------- |
-| `scale`                                    | `uint64` | Precision multiplier (e.g. 1 000 000) |
-| `_latMin`, `_latMax`, `_lonMin`, `_lonMax` | `int64`  | Geofence bounds × scale               |
-| `_minAge`                                  | `uint16` | Minimal allowed age                   |
-
-Example:
+### 🧠 Dependencies
 
 ```js
-constructor(1_000_000, 35000000, 60000000, -10000000, 30000000, 18);
+import { BrowserProvider, Contract, getAddress } from "ethers@6.13.4";
+import { initSDK, createInstance, SepoliaConfig, generateKeypair } from "relayer-sdk-js@0.2.0";
 ```
 
----
-
-### 3. Configure Frontend
-
-In `index.html` update:
+### 🌐 Relayer SDK Configuration
 
 ```js
-const CONFIG = {
-  CONTRACT: "<your deployed contract address>",
-  RELAYER_URL: "https://relayer.testnet.zama.cloud",
-  CHAIN_ID_HEX: "0xaa36a7", // Sepolia
-};
+const RELAYER_URL = "https://relayer.testnet.zama.cloud";
+const relayer = await createInstance({
+  ...SepoliaConfig,
+  relayerUrl: RELAYER_URL,
+  network: window.ethereum,
+  debug: false,
+});
 ```
-
-Then open the file locally or serve it with a simple dev server:
-
-```bash
-npm run start
-```
-
-## Open http://localhost:3001 in your browser.
-
-## 🧠 How It Works
-
-1. The frontend uses Zama’s **Relayer SDK** to encrypt user inputs:
-   - Latitude → `euint64`
-   - Longitude → `euint64`
-   - Age → `euint16`
-
-2. These encrypted values are submitted to `checkAccess()` with a **proof** from the relayer.
-
-3. The contract performs:
-   - FHE comparisons (`FHE.ge`, `FHE.le`) on ciphertexts.
-   - Combines results with `FHE.and` to produce an `ebool`.
-
-4. The resulting `ebool` is:
-   - Made **publicly decryptable** using `FHE.makePubliclyDecryptable`.
-   - Also allowed for the user via `FHE.allow`.
-
-5. The frontend retrieves the handle from `AccessChecked` and calls:
-
-   ```js
-   const result = await relayer.publicDecrypt([handle]);
-   ```
-
-6. The decrypted value (`1` or `0`) determines whether access is granted.
 
 ---
 
@@ -146,7 +89,7 @@ npm run start
 ```
 root/
 ├─ contracts/
-│  └─ PrivateGeoAgeAccess.sol
+│  └─ ConfidentialWalletBackup.sol
 ├─ frontend/
 │  └─ public/
 │     └─ index.html   # Single-file app (UI + logic)
@@ -156,47 +99,117 @@ root/
 └─ .env               # optional HOST/PORT for the server
 ```
 
-## 🛠️ Admin Panel
+---
 
-The **Admin Controls** section allows the owner to:
+## 🧪 Quick Start
 
-- `🔄 Load Current` — read on-chain limits.
-- `🌍 Update Geofence` — update allowed region.
-- `🎂 Update Min Age` — adjust minimum age requirement.
+### 1️⃣ Deploy the Contract
 
-All calls require ownership and are sent via MetaMask.
+```bash
+forge create ConfidentialWalletBackup \
+  --rpc-url https://sepolia.infura.io/v3/<YOUR_KEY> \
+  --private-key <PRIVATE_KEY> \
+  --constructor-args <RELAYER_ADDRESS>
+```
+
+### 3. Configure Frontend
+
+In `index.html` update:
+
+```js
+  CONTRACT_ADDRESS: "<your deployed contract address>",
+  RELAYER_URL: "https://relayer.testnet.zama.cloud",
+  CHAIN_ID_HEX: "0xaa36a7", // Sepolia
+```
+
+### 2️⃣ Run the Frontend
+
+Inside of the project root, run:
+
+```bash
+npm run start
+```
+
+## Open http://localhost:3001 in your browser.
 
 ---
 
-## 🧪 Example Workflow
+## 🧰 Example Actions
 
-1. **User connects wallet** → Relayer + FHEVM initialized.
-2. **User enters latitude, longitude, and age**.
-3. SDK encrypts data → sends to `checkAccess`.
-4. Contract evaluates encrypted logic.
-5. Result decrypted by `publicDecrypt` → UI shows ✅ Access Granted / ⛔ Denied.
+### 🔒 Upload a Share
 
----
+1. Enter `0xabc123...` in the input field
+2. Click **Encrypt & Upload**
+3. The console shows `Encrypted handle: 0x...` and transaction confirmation
 
-## 🧱 Technologies
+### 🔓 Public Decrypt
 
-| Component         | Stack                              |
-| ----------------- | ---------------------------------- |
-| Blockchain        | Ethereum Sepolia (EVM)             |
-| Privacy Layer     | Zama FHEVM                         |
-| SDK               | `@zama-fhe/relayer-sdk@0.2.0`      |
-| Contract Language | Solidity ^0.8.25                   |
-| Frontend          | HTML + JS (ES Modules)             |
-| Wallet            | MetaMask / EIP-1193 provider       |
-| Encryption        | Fully Homomorphic Encryption (FHE) |
+1. Click **Make share public**
+2. Then **Public decrypt**
+3. The decrypted result (`0x...` or a number) appears in the console
+
+### 🧾 User Decrypt (EIP-712)
+
+1. Click **User decrypt (EIP-712)**
+2. Approve the signature request in MetaMask
+3. The console shows re-encrypted plaintext: `🧩 handle → value`
 
 ---
 
-## 🧾 License
+## 🪪 Contract Events
 
-MIT © 2025 — built with ❤️ using Zama FHEVM
+| Event                                              | Description                            |
+| -------------------------------------------------- | -------------------------------------- |
+| `ShareStored(address user, bytes32 handle)`        | A new encrypted share was uploaded.    |
+| `AccessGranted(address user, address to)`          | Access granted for a specific address. |
+| `TransientAccessGranted(address user, address to)` | Temporary (single-use) access granted. |
+| `ShareRevoked(address user)`                       | User’s share was revoked.              |
+| `ShareMadePublic(address user)`                    | Share is now publicly decryptable.     |
+| `RecoveryRequested(address user, bytes32 handle)`  | Recovery process was requested.        |
+| `RelayerSet(address by, address relayer)`          | Admin set a new relayer address.       |
+
+---
+
+## 🧠 Architecture
+
+```
+Browser (Relayer SDK)
+   │
+   ├─▶ Encrypts user input (FHE)
+   │
+   ├─▶ Sends proof + handle → Smart Contract
+   │
+   ├─▶ Manages access control via FHE.allow()
+   │
+   └─▶ Decrypts via relayer.publicDecrypt() or userDecrypt()
+```
+
+---
+
+## ⚡️ Technical Details
+
+- **Network:** Sepolia
+- **Ethers:** v6.13.4
+- **Relayer SDK:** v0.2.0
+- **Relayer URL:** [https://relayer.testnet.zama.cloud](https://relayer.testnet.zama.cloud)
+- **Contract version:** `ConfidentialWalletBackup/1.0.1`
+- **FHE Primitive:** `euint256`
+- **License:** MIT
+
+---
+
+## 📚 Documentation
+
+- [Zama FHEVM Documentation](https://docs.zama.ai)
+- [Relayer SDK Guides](https://docs.zama.org/protocol/relayer-sdk-guides/)
+- [FHEVM Solidity Library](https://github.com/zama-ai/fhevm-solidity)
+- [Ethers.js v6 Docs](https://docs.ethers.org/v6/)
 
 ---
 
 > **Note:** This project runs entirely on Sepolia Testnet. For production, configure mainnet relayer endpoints and
 > deploy with verified contracts.
+
+## 🧾 License
+
+MIT © 2025 — built with ❤️ using Zama FHEVM
